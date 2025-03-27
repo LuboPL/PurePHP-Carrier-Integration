@@ -20,6 +20,9 @@ $order = [
     'deliveryCountry' => 'RO',
     'deliveryEmail' => 'john@doe.com',
     'deliveryPhone' => '555555555',
+
+    'products' => [
+    ]
 ];
 
 $params = [
@@ -30,13 +33,13 @@ $params = [
 
 try {
     // 1. Create courier object
-    $springShipment = new SpringCourier($params['apiKey']);
+    $springCourier = new SpringCourier($params['apiKey']);
 
     // 2. Create shipment
-    $springShipment->newPackage($order, $params);
+    $shipment = $springCourier->newPackage($order, $params);
 
     // 3. Get shipping label and force a download dialog
-    $springShipment->packagePDF($springShipment->trackingNumber);
+    $springCourier->packagePDF($shipment->getShipmentDetails()->trackingNumber);
 
 } catch (Exception $exception) {
     echo $exception->getMessage();
