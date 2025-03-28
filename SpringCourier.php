@@ -9,13 +9,13 @@ class SpringCourier
 
     private ApiClient $client;
     private LabelService $labelService;
-    private ShipmentService $shipmentService;
+    private ShipmentMapper $shipmentMapper;
 
     public function __construct(private readonly string $apiKey)
     {
         $this->client = new ApiClient();
         $this->labelService = new LabelService();
-        $this->shipmentService = new ShipmentService();
+        $this->shipmentMapper = new ShipmentMapper();
     }
 
     /**
@@ -23,18 +23,17 @@ class SpringCourier
      */
     public function newPackage(array $order, array $params): Shipment
     {
-        $shipment = $this->shipmentService->mapShipment($order, $params);
+        $shipment = $this->shipmentMapper->mapShipment($order, $params);
 
         $response = $this->client->executeRequest(
             self::API_URL,
-            $this->shipmentService->prepareRequestData(
+            $this->shipmentMapper->mapRequestData(
                 $this->apiKey,
                 self::ORDER_SHIPMENT_COMMAND,
                 $shipment->jsonSerialize()
             )
         );
 
-        $response = $this->shipmentService->mapShipmentResponse($response);
         $shipment->setShipmentDetails($response->shipmentDetails);
 
         return $shipment;
@@ -47,13 +46,12 @@ class SpringCourier
     {
         $response = $this->client->executeRequest(
             self::API_URL,
-            $this->shipmentService->prepareRequestData(
+            $this->shipmentMapper->mapRequestData(
                 $this->apiKey,
                 self::GET_SHIPMENT_LABEL_COMMAND,
                 ['TrackingNumber' => $trackingNumber]
             )
         );
-        $response = $this->shipmentService->mapShipmentResponse($response);
         $label = $this->labelService->getLabel($response->shipmentDetails);
         echo $label;
         exit();
@@ -101,7 +99,7 @@ readonly class LabelService
     }
 }
 
-readonly class ShipmentService
+readonly class ShipmentMapper
 {
     public function mapShipment(array $order, array $params): Shipment
     {
@@ -116,12 +114,7 @@ readonly class ShipmentService
         );
     }
 
-    public function mapShipmentResponse(array $response): ShipmentApiResponse
-    {
-        return ShipmentApiResponse::fromArray($response);
-    }
-
-    public function prepareRequestData(string $apiKey, string $apiCommand, array $data): array
+    public function mapRequestData(string $apiKey, string $apiCommand, array $data): array
     {
         return [
             'Apikey' => $apiKey,
@@ -421,7 +414,9 @@ readonly class ShipmentApiResponse
         public int $errorLevel,
         public string $error,
         public ?ShipmentDetails $shipmentDetails = null
-    ) {}
+    )
+    {
+    }
 
     public static function fromArray(array $data): self
     {
@@ -476,7 +471,7 @@ readonly class ApiClient
     /**
      * @throws Exception
      */
-    public function executeRequest(string $apiUrl, array $data): array
+    public function executeRequest(string $apiUrl, array $data): ShipmentApiResponse
     {
         $jsonData = $this->prepareJsonPayload($data);
         $curlHandle = $this->initializeCurlRequest($apiUrl, $jsonData);
@@ -484,7 +479,7 @@ readonly class ApiClient
         $response = $this->sendCurlRequest($curlHandle);
         $this->validateCurlExecution($curlHandle);
 
-        $responseData = $this->parseResponse($response);
+        $responseData = ShipmentApiResponse::fromArray($this->parseResponse($response));
         $this->validateApiResponse($responseData);
         curl_close($curlHandle);
 
@@ -555,11 +550,11 @@ readonly class ApiClient
     /**
      * @throws Exception
      */
-    private function validateApiResponse(array $responseData): void
+    private function validateApiResponse(ShipmentApiResponse $response): void
     {
-        if ($responseData['ErrorLevel'] !== 0) {
+        if ($response->errorLevel !== 0) {
             throw new Exception(
-                sprintf('API error: %s', json_encode($responseData['Error']))
+                sprintf('API error: %s', json_encode($response->error))
             );
         }
     }

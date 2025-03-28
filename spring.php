@@ -20,7 +20,7 @@ $order = [
     'deliveryCountry' => 'RO',
     'deliveryEmail' => 'john@doe.com',
     'deliveryPhone' => '555555555',
-
+    // If you want to add products
     'products' => [
     ]
 ];
