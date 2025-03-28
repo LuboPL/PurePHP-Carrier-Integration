@@ -24,7 +24,6 @@ readonly class SpringCourier
     public function newPackage(array $order, array $params): Shipment
     {
         $shipment = $this->shipmentMapper->mapShipment($order, $params);
-
         $response = $this->client->executeRequest(
             self::API_URL,
             $this->shipmentMapper->mapRequestData(
@@ -33,7 +32,6 @@ readonly class SpringCourier
                 $shipment->jsonSerialize()
             )
         );
-
         $shipment->setShipmentDetails($response->shipmentDetails);
 
         return $shipment;
@@ -67,7 +65,7 @@ readonly class LabelService
     {
         $label = match ($shipmentDetails->labelFormat) {
             'PDF' => $this->decodePDFLabelFromResponse($shipmentDetails->labelImage),
-            default => throw new Exception('Label Type not supported')
+            default => throw new Exception('Label type not supported')
         };
         $this->setHeadersForBrowser($label, $shipmentDetails->trackingNumber);
 
@@ -110,7 +108,7 @@ readonly class ShipmentMapper
             value: $order['value'] ?? '',
             consignorAddress: ConsignorAddress::fromArray($order),
             consigneeAddress: ConsigneeAddress::fromArray($order),
-            products: $order['products'] ?? [],
+            products: $this->mapProducts($order),
             labelFormat: $params['labelFormat'] ?? 'PDF',
             orderReference: $order['orderReference'] ?? null,
             orderDate: $order['orderDate'] ?? null,
@@ -140,35 +138,107 @@ readonly class ShipmentMapper
             'Shipment' => $data
         ];
     }
+
+    private function mapProducts(array $order): array
+    {
+        return array_map(
+            fn(array $product) => (new Product(
+                description: $product['description'],
+                sku: $product['sku'] ?? '',
+                hsCode: $product['hsCode'],
+                originCountry: $product['originCountry'] ?? '',
+                imgUrl: $product['imgUrl'] ?? '',
+                purchaseUrl: $product['purchaseUrl'] ?? '',
+                quantity: $product['quantity'],
+                value: $product['value'],
+                weight: $product['weight'],
+                daysForReturn: $product['daysForReturn'] ?? null,
+                nonReturnable: $product['nonReturnable'] ?? null
+            ))->jsonSerialize(),
+            $order['products'] ?? []
+        );
+    }
 }
 
-class ConsignorAddress implements JsonSerializable
+abstract class BaseAddress implements JsonSerializable
 {
-    private function __construct(
+    public function __construct(
         public readonly string $name,
         public readonly string $country,
         public readonly string $phone,
         public readonly string $email,
         public readonly string $city,
         public string $addressLine1,
-        public ?string $company = null,
         public ?string $addressLine2 = null,
         public ?string $addressLine3 = null,
+        public ?string $company = null,
         public readonly ?string $state = null,
         public readonly ?string $zip = null,
-        public readonly ?string $vat = null,
+        public readonly ?string $vat = null
+    ) {
+        $this->normalizeAddressLines();
+    }
+
+    protected function normalizeAddressLines(): void
+    {
+        if (strlen($this->addressLine1) <= 30) {
+            return;
+        }
+
+        $fullAddress = $this->addressLine1;
+        $this->addressLine1 = substr($fullAddress, 0, 30);
+        $this->addressLine2 = substr($fullAddress, 30, 30);
+        $this->addressLine3 = strlen($fullAddress) > 60
+            ? substr($fullAddress, 60)
+            : null;
+    }
+
+    public function jsonSerialize(): array
+    {
+        $baseFields = [
+            'Name' => $this->name,
+            'Company' => $this->company,
+            'AddressLine1' => $this->addressLine1,
+            'AddressLine2' => $this->addressLine2,
+            'AddressLine3' => $this->addressLine3,
+            'City' => $this->city,
+            'State' => $this->state,
+            'Zip' => $this->zip,
+            'Country' => $this->country,
+            'Phone' => $this->phone,
+            'Email' => $this->email,
+            'Vat' => $this->vat
+        ];
+
+        return array_filter($baseFields, fn($value) => $value !== null);
+    }
+}
+
+class ConsignorAddress extends BaseAddress
+{
+    public function __construct(
+        string $name,
+        string $country,
+        string $phone,
+        string $email,
+        string $city,
+        string $addressLine1,
+        ?string $addressLine2 = null,
+        ?string $addressLine3 = null,
+        ?string $company = null,
+        ?string $state = null,
+        ?string $zip = null,
+        ?string $vat = null,
         public readonly ?string $eori = null,
         public readonly ?string $nlVat = null,
         public readonly ?string $euEori = null,
         public readonly ?string $ioss = null
     ) {
-        if (strlen($addressLine1) > 30) {
-            $this->addressLine1 = substr($addressLine1, 0, 30);
-            $this->addressLine2 = substr($addressLine1, 30, 30);
-            $this->addressLine3 = strlen($addressLine1) > 60
-                ? substr($addressLine1, 60, 30)
-                : null;
-        }
+        parent::__construct(
+            $name, $country, $phone, $email, $city,
+            $addressLine1, $addressLine2, $addressLine3,
+            $company, $state, $zip, $vat
+        );
     }
 
     public static function fromArray(array $data): self
@@ -182,9 +252,9 @@ class ConsignorAddress implements JsonSerializable
             email: $data['senderEmail'] ?? '',
             city: $data['senderCity'] ?? '',
             addressLine1: $addressLine,
-            company: $data['senderCompany'] ?? null,
             addressLine2: $data['senderAddress2'] ?? null,
             addressLine3: $data['senderAddress3'] ?? null,
+            company: $data['senderCompany'] ?? null,
             state: $data['senderState'] ?? null,
             zip: $data['senderZip'] ?? null,
             vat: $data['senderVat'] ?? null,
@@ -197,53 +267,40 @@ class ConsignorAddress implements JsonSerializable
 
     public function jsonSerialize(): array
     {
-        $allFields = [
-            'Name' => $this->name,
-            'Company' => $this->company,
-            'AddressLine1' => $this->addressLine1,
-            'AddressLine2' => $this->addressLine2,
-            'AddressLine3' => $this->addressLine3,
-            'City' => $this->city,
-            'State' => $this->state,
-            'Zip' => $this->zip,
-            'Country' => $this->country,
-            'Phone' => $this->phone,
-            'Email' => $this->email,
-            'Vat' => $this->vat,
+        $baseFields = parent::jsonSerialize();
+        $specificFields = [
             'Eori' => $this->eori,
             'NlVat' => $this->nlVat,
             'EuEori' => $this->euEori,
             'Ioss' => $this->ioss
         ];
 
-        return array_filter($allFields, fn($value) => $value !== null);
+        return array_filter(array_merge($baseFields, $specificFields), fn($value) => $value !== null);
     }
 }
 
-class ConsigneeAddress implements JsonSerializable
+class ConsigneeAddress extends BaseAddress
 {
     public function __construct(
-        public readonly string $name,
-        public readonly string $country,
-        public readonly string $phone,
-        public readonly string $email,
-        public readonly string $city,
-        public string $addressLine1,
-        public ?string $addressLine2 = null,
-        public ?string $addressLine3 = null,
-        public readonly ?string $company = null,
-        public readonly ?string $state = null,
-        public readonly ?string $zip = null,
-        public readonly ?string $vat = null,
+        string $name,
+        string $country,
+        string $phone,
+        string $email,
+        string $city,
+        string $addressLine1,
+        ?string $addressLine2 = null,
+        ?string $addressLine3 = null,
+        ?string $company = null,
+        ?string $state = null,
+        ?string $zip = null,
+        ?string $vat = null,
         public readonly ?string $pudoLocationId = null
     ) {
-        if (strlen($addressLine1) > 30) {
-            $this->addressLine1 = substr($addressLine1, 0, 30);
-            $this->addressLine2 = substr($addressLine1, 30, 30);
-            $this->addressLine3 = strlen($addressLine1) > 60
-                ? substr($addressLine1, 60, 30)
-                : null;
-        }
+        parent::__construct(
+            $name, $country, $phone, $email, $city,
+            $addressLine1, $addressLine2, $addressLine3,
+            $company, $state, $zip, $vat
+        );
     }
 
     public static function fromArray(array $data): self
@@ -269,23 +326,10 @@ class ConsigneeAddress implements JsonSerializable
 
     public function jsonSerialize(): array
     {
-        $allFields = [
-            'Name' => $this->name,
-            'Country' => $this->country,
-            'Phone' => $this->phone,
-            'Email' => $this->email,
-            'City' => $this->city,
-            'AddressLine1' => $this->addressLine1,
-            'AddressLine2' => $this->addressLine2,
-            'AddressLine3' => $this->addressLine3,
-            'Company' => $this->company,
-            'State' => $this->state,
-            'Zip' => $this->zip,
-            'Vat' => $this->vat,
-            'PudoLocationId' => $this->pudoLocationId
-        ];
+        $baseFields = parent::jsonSerialize();
+        $specificFields = ['PudoLocationId' => $this->pudoLocationId];
 
-        return array_filter($allFields, fn($value) => $value !== null);
+        return array_filter(array_merge($baseFields, $specificFields), fn($value) => $value !== null);
     }
 }
 
@@ -376,7 +420,7 @@ class Shipment implements JsonSerializable
 
 readonly class Product implements JsonSerializable
 {
-    private function __construct(
+    public function __construct(
         private string $description,
         private string $sku,
         private string $hsCode,
@@ -390,23 +434,6 @@ readonly class Product implements JsonSerializable
         private ?string $nonReturnable = null
     )
     {
-    }
-
-    public static function fromArray(array $data): self
-    {
-        return new self(
-            description: $data['description'],
-            sku: $data['sku'] ?? '',
-            hsCode: $data['hsCode'],
-            originCountry: $data['originCountry'] ?? '',
-            imgUrl: $data['imgUrl'] ?? '',
-            purchaseUrl: $data['purchaseUrl'] ?? '',
-            quantity: $data['quantity'],
-            value: $data['value'],
-            weight: $data['weight'],
-            daysForReturn: $data['daysForReturn'] ?? null,
-            nonReturnable: $data['nonReturnable'] ?? null
-        );
     }
 
     public function jsonSerialize(): array
