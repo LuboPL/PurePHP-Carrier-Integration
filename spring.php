@@ -13,7 +13,6 @@ $order = [
     'senderPhone' => '666666666',
 
     // Another sender params
-
     'senderCountry' => '',
     'senderAddress2' => '',
     'senderAddress3' => '',
@@ -34,13 +33,11 @@ $order = [
     'deliveryPhone' => '555555555',
 
     // Another delivery params
-
     'deliveryState' => '',
     'deliveryVat' => '',
     'deliveryPudoLocationId'=> '',
 
     // If you want to add products
-
     'products' => [
         [
             'description' => '',
@@ -58,7 +55,6 @@ $order = [
     ],
 
     // Another order params
-
     'consigneeAddress' => '',
     'consignorAddress' => '',
     'currency' => '',
@@ -78,7 +74,6 @@ $params = [
     'service' => 'EXPR',
 
     // Another Shipment Object params
-
     'weight' => '',
     'weightUnit' => '',
     'width' => '',
