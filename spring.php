@@ -14,15 +14,15 @@ $order = [
 
     // Another sender params
 
-//    'senderCountry' => '',
-//    'senderAddress2' => '',
-//    'senderAddress3' => '',
-//    'senderState' => '',
-//    'senderVat' => '',
-//    'senderEori' => '',
-//    'senderNlVat' => '',
-//    'senderEuEori' => '',
-//    'senderIoss' => '',
+    'senderCountry' => '',
+    'senderAddress2' => '',
+    'senderAddress3' => '',
+    'senderState' => '',
+    'senderVat' => '',
+    'senderEori' => '',
+    'senderNlVat' => '',
+    'senderEuEori' => '',
+    'senderIoss' => '',
 
     'deliveryCompany' => 'Spring GDS',
     'deliveryFullname' => 'Maud Driant',
@@ -35,40 +35,40 @@ $order = [
 
     // Another delivery params
 
-//    'deliveryState' => '',
-//    'deliveryVat' => '',
-//    'deliveryPudoLocationId'=> '',
+    'deliveryState' => '',
+    'deliveryVat' => '',
+    'deliveryPudoLocationId'=> '',
 
     // If you want to add products
 
-//    'products' => [
-//        [
-//            'description' => '',
-//            'daysForReturn' => '',
-//            'hsCode' => '',
-//            'imgUrl' => '',
-//            'nonReturnable' => '',
-//            'originCountry' => '',
-//            'purchaseUrl' => '',
-//            'quantity' => '',
-//            'sku' => '',
-//            'value' => '',
-//            'weight' => '',
-//        ]
-//    ],
+    'products' => [
+        [
+            'description' => '',
+            'daysForReturn' => '',
+            'hsCode' => '',
+            'imgUrl' => '',
+            'nonReturnable' => '',
+            'originCountry' => '',
+            'purchaseUrl' => '',
+            'quantity' => '',
+            'sku' => '',
+            'value' => '',
+            'weight' => '',
+        ]
+    ],
 
     // Another order params
 
-//    'consigneeAddress' => '',
-//    'consignorAddress' => '',
-//    'currency' => '',
-//    'description' => '',
-//    'displayId' => '',
-//    'invoiceNumber' => '',
-//    'orderDate' => '',
-//    'orderReference' => '',
-//    'shippingValue' => '',
-//    'value' => '',
+    'consigneeAddress' => '',
+    'consignorAddress' => '',
+    'currency' => '',
+    'description' => '',
+    'displayId' => '',
+    'invoiceNumber' => '',
+    'orderDate' => '',
+    'orderReference' => '',
+    'shippingValue' => '',
+    'value' => '',
 
 ];
 
@@ -79,18 +79,18 @@ $params = [
 
     // Another Shipment Object params
 
-//    'weight' => '',
-//    'weightUnit' => '',
-//    'width' => '',
-//    'length' => '',
-//    'height' => '',
-//    'dimUnit' => '',
-//    'declarationType' => '',
-//    'dangerousGoods' => '',
-//    'exportAwb' => '',
-//    'exportCarrierName' => '',
-//    'customsDuty' => '',
-//    'shipperReference' => '',
+    'weight' => '',
+    'weightUnit' => '',
+    'width' => '',
+    'length' => '',
+    'height' => '',
+    'dimUnit' => '',
+    'declarationType' => '',
+    'dangerousGoods' => '',
+    'exportAwb' => '',
+    'exportCarrierName' => '',
+    'customsDuty' => '',
+    'shipperReference' => '',
 ];
 
 try {
