@@ -115,11 +115,11 @@ readonly class ShipmentMapper
             orderDate: $order['orderDate'] ?? null,
             displayId: $order['displayId'] ?? null,
             invoiceNumber: $order['invoiceNumber'] ?? null,
-            weightUnit: $order['weightUnit'] ?? 'kg',
-            length: $order['length'] ?? null,
-            width: $order['width'] ?? null,
-            height: $order['height'] ?? null,
-            dimUnit: $order['dimUnit'] ?? 'cm',
+            weightUnit: $params['weightUnit'] ?? 'kg',
+            length: $params['length'] ?? null,
+            width: $params['width'] ?? null,
+            height: $params['height'] ?? null,
+            dimUnit: $params['dimUnit'] ?? 'cm',
             shippingValue: $order['shippingValue'] ?? null,
             currency: $order['currency'] ?? 'EUR',
             customsDuty: $params['customsDuty'] ?? 'DDU',
@@ -190,7 +190,7 @@ abstract class BaseAddress implements JsonSerializable
         $this->addressLine1 = substr($fullAddress, 0, 30);
         $this->addressLine2 = substr($fullAddress, 30, 30);
         $this->addressLine3 = strlen($fullAddress) > 60
-            ? substr($fullAddress, 60)
+            ? substr($fullAddress, 60, 30)
             : null;
     }
 

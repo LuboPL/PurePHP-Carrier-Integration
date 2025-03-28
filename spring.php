@@ -12,6 +12,18 @@ $order = [
     'senderEmail' => '',
     'senderPhone' => '666666666',
 
+    // Another sender params
+
+//    'senderCountry' => '',
+//    'senderAddress2' => '',
+//    'senderAddress3' => '',
+//    'senderState' => '',
+//    'senderVat' => '',
+//    'senderEori' => '',
+//    'senderNlVat' => '',
+//    'senderEuEori' => '',
+//    'senderIoss' => '',
+
     'deliveryCompany' => 'Spring GDS',
     'deliveryFullname' => 'Maud Driant',
     'deliveryAddress' => 'Strada Foisorului, Nr. 16, Bl. F11C, Sc. 1, Ap. 10',
@@ -20,16 +32,65 @@ $order = [
     'deliveryCountry' => 'RO',
     'deliveryEmail' => 'john@doe.com',
     'deliveryPhone' => '555555555',
+
+    // Another delivery params
+
+//    'deliveryState' => '',
+//    'deliveryVat' => '',
+//    'deliveryPudoLocationId'=> '',
+
     // If you want to add products
-    'products' => [
-    ]
+
+//    'products' => [
+//        [
+//            'description' => '',
+//            'daysForReturn' => '',
+//            'hsCode' => '',
+//            'imgUrl' => '',
+//            'nonReturnable' => '',
+//            'originCountry' => '',
+//            'purchaseUrl' => '',
+//            'quantity' => '',
+//            'sku' => '',
+//            'value' => '',
+//            'weight' => '',
+//        ]
+//    ],
+
+    // Another order params
+
+//    'consigneeAddress' => '',
+//    'consignorAddress' => '',
+//    'currency' => '',
+//    'description' => '',
+//    'displayId' => '',
+//    'invoiceNumber' => '',
+//    'orderDate' => '',
+//    'orderReference' => '',
+//    'shippingValue' => '',
+//    'value' => '',
+
 ];
 
 $params = [
     'apiKey' => 'ed1e2e1567b781d6',
     'labelFormat' => 'PDF',
     'service' => 'EXPR',
+
     // Another Shipment Object params
+
+//    'weight' => '',
+//    'weightUnit' => '',
+//    'width' => '',
+//    'length' => '',
+//    'height' => '',
+//    'dimUnit' => '',
+//    'declarationType' => '',
+//    'dangerousGoods' => '',
+//    'exportAwb' => '',
+//    'exportCarrierName' => '',
+//    'customsDuty' => '',
+//    'shipperReference' => '',
 ];
 
 try {
