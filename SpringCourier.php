@@ -4,7 +4,7 @@ declare(strict_types=1);
 class SpringCourier
 {
     private const string API_URL = 'https://mtapi.net/?testMode=1';
-    private const string ORDER_SHIPMENT_COMMAND = 'OrderShipment';
+    private const string CREATE_ORDER_SHIPMENT_COMMAND = 'OrderShipment';
     private const string GET_SHIPMENT_LABEL_COMMAND = 'GetShipmentLabel';
 
     private ApiClient $client;
@@ -29,7 +29,7 @@ class SpringCourier
             self::API_URL,
             $this->shipmentMapper->mapRequestData(
                 $this->apiKey,
-                self::ORDER_SHIPMENT_COMMAND,
+                self::CREATE_ORDER_SHIPMENT_COMMAND,
                 $shipment->jsonSerialize()
             )
         );
@@ -52,7 +52,7 @@ class SpringCourier
                 ['TrackingNumber' => $trackingNumber]
             )
         );
-        $label = $this->labelService->getLabel($response->shipmentDetails);
+        $label = $this->labelService->printLabel($response->shipmentDetails);
         echo $label;
         exit();
     }
@@ -63,7 +63,7 @@ readonly class LabelService
     /**
      * @throws Exception
      */
-    public function getLabel(ShipmentDetails $shipmentDetails): string
+    public function printLabel(ShipmentDetails $shipmentDetails): string
     {
         $label = match ($shipmentDetails->labelFormat) {
             'PDF' => $this->decodePDFLabelFromResponse($shipmentDetails->labelImage),
@@ -104,13 +104,31 @@ readonly class ShipmentMapper
     public function mapShipment(array $order, array $params): Shipment
     {
         return new Shipment(
-            shipperReference: $order['shipperReference'] ?? '',
+            shipperReference: $params['shipperReference'] ?? '',
             service: $params['service'] ?? '',
-            weight: $order['weight'] ?? '',
+            weight: $params['weight'] ?? '',
             value: $order['value'] ?? '',
             consignorAddress: ConsignorAddress::fromArray($order),
             consigneeAddress: ConsigneeAddress::fromArray($order),
-            products: $order['products'] ?? []
+            products: $order['products'] ?? [],
+            labelFormat: $params['labelFormat'] ?? 'PDF',
+            orderReference: $order['orderReference'] ?? null,
+            orderDate: $order['orderDate'] ?? null,
+            displayId: $order['displayId'] ?? null,
+            invoiceNumber: $order['invoiceNumber'] ?? null,
+            weightUnit: $order['weightUnit'] ?? 'kg',
+            length: $order['length'] ?? null,
+            width: $order['width'] ?? null,
+            height: $order['height'] ?? null,
+            dimUnit: $order['dimUnit'] ?? 'cm',
+            shippingValue: $order['shippingValue'] ?? null,
+            currency: $order['currency'] ?? 'EUR',
+            customsDuty: $params['customsDuty'] ?? 'DDU',
+            description: $order['description'] ?? null,
+            declarationType: $params['declarationType'] ?? 'SaleOfGoods',
+            dangerousGoods: $params['dangerousGoods'] ?? 'N',
+            exportCarrierName: $params['exportCarrierName'] ?? null,
+            exportAwb: $params['exportAwb'] ?? null
         );
     }
 
@@ -124,46 +142,56 @@ readonly class ShipmentMapper
     }
 }
 
-readonly class ConsignorAddress implements JsonSerializable
+class ConsignorAddress implements JsonSerializable
 {
     private function __construct(
-        public string $name,
-        public string $company,
+        public readonly string $name,
+        public readonly string $country,
+        public readonly string $phone,
+        public readonly string $email,
+        public readonly string $city,
         public string $addressLine1,
-        public string $addressLine2,
-        public string $addressLine3,
-        public string $city,
-        public string $state,
-        public string $zip,
-        public string $country,
-        public string $phone,
-        public string $email,
-        public string $vat,
-        public string $eori,
-        public string $nlVat,
-        public string $euEori,
-        public string $ioss
-    ) {}
+        public ?string $company = null,
+        public ?string $addressLine2 = null,
+        public ?string $addressLine3 = null,
+        public readonly ?string $state = null,
+        public readonly ?string $zip = null,
+        public readonly ?string $vat = null,
+        public readonly ?string $eori = null,
+        public readonly ?string $nlVat = null,
+        public readonly ?string $euEori = null,
+        public readonly ?string $ioss = null
+    ) {
+        if (strlen($addressLine1) > 30) {
+            $this->addressLine1 = substr($addressLine1, 0, 30);
+            $this->addressLine2 = substr($addressLine1, 30, 30);
+            $this->addressLine3 = strlen($addressLine1) > 60
+                ? substr($addressLine1, 60, 30)
+                : null;
+        }
+    }
 
     public static function fromArray(array $data): self
     {
+        $addressLine = $data['senderAddress'] ?? '';
+
         return new self(
             name: $data['senderFullname'] ?? '',
-            company: $data['senderCompany'] ?? '',
-            addressLine1: $data['senderAddress'] ?? '',
-            addressLine2: $data['senderAddress'] ?? '',
-            addressLine3: $data['senderAddress'] ?? '',
-            city: $data['senderCity'] ?? '',
-            state: $data['senderState'] ?? '',
-            zip: $data['senderZip'] ?? '',
             country: $data['senderCountry'] ?? '',
             phone: $data['senderPhone'] ?? '',
             email: $data['senderEmail'] ?? '',
-            vat: $data['senderVat'] ?? '',
-            eori: $data['senderEori'] ?? '',
-            nlVat: $data['senderNlVat'] ?? '',
-            euEori: $data['senderEuEori'] ?? '',
-            ioss: $data['senderIoss'] ?? ''
+            city: $data['senderCity'] ?? '',
+            addressLine1: $addressLine,
+            company: $data['senderCompany'] ?? null,
+            addressLine2: $data['senderAddress2'] ?? null,
+            addressLine3: $data['senderAddress3'] ?? null,
+            state: $data['senderState'] ?? null,
+            zip: $data['senderZip'] ?? null,
+            vat: $data['senderVat'] ?? null,
+            eori: $data['senderEori'] ?? null,
+            nlVat: $data['senderNlVat'] ?? null,
+            euEori: $data['senderEuEori'] ?? null,
+            ioss: $data['senderIoss'] ?? null
         );
     }
 
@@ -188,46 +216,54 @@ readonly class ConsignorAddress implements JsonSerializable
             'Ioss' => $this->ioss
         ];
 
-        return array_filter($allFields, function ($value) {
-            return !empty($value);
-        });
+        return array_filter($allFields, fn($value) => $value !== null);
     }
 }
 
-readonly class ConsigneeAddress implements JsonSerializable
+class ConsigneeAddress implements JsonSerializable
 {
     public function __construct(
-        public string $name,
-        public string $country,
-        public string $phone,
-        public string $email,
-        public string $city,
+        public readonly string $name,
+        public readonly string $country,
+        public readonly string $phone,
+        public readonly string $email,
+        public readonly string $city,
         public string $addressLine1,
         public ?string $addressLine2 = null,
         public ?string $addressLine3 = null,
-        public ?string $company = null,
-        public ?string $state = null,
-        public ?string $zip = null,
-        public ?string $vat = null,
-        public ?string $pudoLocationId = null
-    ) {}
+        public readonly ?string $company = null,
+        public readonly ?string $state = null,
+        public readonly ?string $zip = null,
+        public readonly ?string $vat = null,
+        public readonly ?string $pudoLocationId = null
+    ) {
+        if (strlen($addressLine1) > 30) {
+            $this->addressLine1 = substr($addressLine1, 0, 30);
+            $this->addressLine2 = substr($addressLine1, 30, 30);
+            $this->addressLine3 = strlen($addressLine1) > 60
+                ? substr($addressLine1, 60, 30)
+                : null;
+        }
+    }
 
     public static function fromArray(array $data): self
     {
+        $addressLine = $data['deliveryAddress'] ?? '';
+
         return new self(
             name: $data['deliveryFullname'] ?? '',
             country: $data['deliveryCountry'] ?? '',
             phone: $data['deliveryPhone'] ?? '',
             email: $data['deliveryEmail'] ?? '',
             city: $data['deliveryCity'] ?? '',
-            addressLine1: $data['deliveryAddress'] ?? '',
-            addressLine2: $data['deliveryAddress'] ?? '',
-            addressLine3: $data['deliveryAddress'] ?? '',
-            company: $data['deliveryCompany'] ?? '',
-            state: $data['deliveryState'] ?? '',
-            zip: $data['deliveryPostalCode'] ?? '',
-            vat: $data['deliveryVat'] ?? '',
-            pudoLocationId: $data['deliveryPudoLocationId'] ?? ''
+            addressLine1: $addressLine,
+            addressLine2: $data['deliveryAddress2'] ?? null,
+            addressLine3: $data['deliveryAddress3'] ?? null,
+            company: $data['deliveryCompany'] ?? null,
+            state: $data['deliveryState'] ?? null,
+            zip: $data['deliveryPostalCode'] ?? null,
+            vat: $data['deliveryVat'] ?? null,
+            pudoLocationId: $data['deliveryPudoLocationId'] ?? null
         );
     }
 
@@ -249,15 +285,13 @@ readonly class ConsigneeAddress implements JsonSerializable
             'PudoLocationId' => $this->pudoLocationId
         ];
 
-        return array_filter($allFields, function ($value) {
-            return !empty($value);
-        });
+        return array_filter($allFields, fn($value) => $value !== null);
     }
 }
 
 class Shipment implements JsonSerializable
 {
-    private ShipmentDetails $shipmentDetails;
+    private ?ShipmentDetails $shipmentDetails = null;
 
     public function __construct(
         public readonly string $shipperReference,
@@ -309,9 +343,7 @@ class Shipment implements JsonSerializable
             'Products' => $this->products,
         ];
 
-        if (!empty($this->value)) {
-            $data['value'] = $this->value;
-        }
+        !empty($this->value) && $data['Value'] = $this->value;
 
         $optionalFields = [
             'OrderReference' => $this->orderReference,
@@ -328,13 +360,7 @@ class Shipment implements JsonSerializable
             'ExportAwb' => $this->exportAwb
         ];
 
-        foreach ($optionalFields as $key => $value) {
-            if ($value !== null) {
-                $data[$key] = $value;
-            }
-        }
-
-        return $data;
+        return array_merge($data, array_filter($optionalFields, fn($value) => $value !== null));
     }
 
     public function getShipmentDetails(): ShipmentDetails
@@ -397,12 +423,8 @@ readonly class Product implements JsonSerializable
             'Weight' => $this->weight
         ];
 
-        if ($this->daysForReturn !== null) {
-            $data['DaysForReturn'] = $this->daysForReturn;
-        }
-        if ($this->nonReturnable !== null) {
-            $data['NonReturnable'] = $this->nonReturnable;
-        }
+        $this->daysForReturn !== null && $data['DaysForReturn'] = $this->daysForReturn;
+        $this->nonReturnable !== null && $data['NonReturnable'] = $this->nonReturnable;
 
         return $data;
     }
@@ -468,13 +490,17 @@ readonly class ShipmentDetails
 
 readonly class ApiClient
 {
+    public function __construct(private int $curlTimeout = 30)
+    {
+    }
+
     /**
      * @throws Exception
      */
     public function executeRequest(string $apiUrl, array $data): ShipmentApiResponse
     {
-        $jsonData = $this->prepareJsonPayload($data);
-        $curlHandle = $this->initializeCurlRequest($apiUrl, $jsonData);
+        $jsonData = json_encode($data);
+        $curlHandle = $this->initializeCurlPostRequest($apiUrl, $jsonData);
 
         $response = $this->sendCurlRequest($curlHandle);
         $this->validateCurlExecution($curlHandle);
@@ -486,12 +512,7 @@ readonly class ApiClient
         return $responseData;
     }
 
-    private function prepareJsonPayload(array $data): string
-    {
-        return json_encode($data);
-    }
-
-    private function initializeCurlRequest(string $apiUrl, string $jsonData): CurlHandle
+    private function initializeCurlPostRequest(string $apiUrl, string $jsonData): CurlHandle
     {
         $curlHandle = curl_init($apiUrl);
 
@@ -499,7 +520,8 @@ readonly class ApiClient
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $jsonData,
-            CURLOPT_HTTPHEADER => ['Content-Type: application/json']
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_TIMEOUT => $this->curlTimeout
         ]);
 
         return $curlHandle;
@@ -552,10 +574,17 @@ readonly class ApiClient
      */
     private function validateApiResponse(ShipmentApiResponse $response): void
     {
-        if ($response->errorLevel !== 0) {
-            throw new Exception(
-                sprintf('API error: %s', json_encode($response->error))
+        $errorMap = [
+            1 => 'Command completed with errors: %s',
+            10 => 'Fatal error, command is not completed at all: %s',
+        ];
+
+        if (isset($errorMap[$response->errorLevel])) {
+            $message = sprintf(
+                $errorMap[$response->errorLevel],
+                json_encode($response->error)
             );
+            throw new Exception($message);
         }
     }
 }

@@ -29,6 +29,7 @@ $params = [
     'apiKey' => 'ed1e2e1567b781d6',
     'labelFormat' => 'PDF',
     'service' => 'EXPR',
+    // Another Shipment Object params
 ];
 
 try {
