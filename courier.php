@@ -71,6 +71,7 @@ readonly class LabelService
 
         return $label;
     }
+
     /**
      * @throws Exception
      */
