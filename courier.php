@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-class SpringCourier
+readonly class SpringCourier
 {
     private const string API_URL = 'https://mtapi.net/?testMode=1';
     private const string CREATE_ORDER_SHIPMENT_COMMAND = 'OrderShipment';
@@ -11,7 +11,7 @@ class SpringCourier
     private LabelService $labelService;
     private ShipmentMapper $shipmentMapper;
 
-    public function __construct(private readonly string $apiKey)
+    public function __construct(private string $apiKey)
     {
         $this->client = new ApiClient();
         $this->labelService = new LabelService();
