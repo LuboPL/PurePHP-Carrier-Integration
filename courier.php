@@ -255,22 +255,22 @@ class ConsignorAddress extends BaseAddress
         $addressLine = $data['senderAddress'] ?? '';
 
         return new self(
-            $data['senderFullname'] ?? '',
-            $data['senderCountry'] ?? '',
-            $data['senderPhone'] ?? '',
-            $data['senderEmail'] ?? '',
-            $data['senderCity'] ?? '',
-            $addressLine,
-            $data['senderAddress2'] ?? null,
-            $data['senderAddress3'] ?? null,
-            $data['senderCompany'] ?? null,
-            $data['senderState'] ?? null,
-            $data['senderZip'] ?? null,
-            $data['senderVat'] ?? null,
-            $data['senderEori'] ?? null,
-            $data['senderNlVat'] ?? null,
-            $data['senderEuEori'] ?? null,
-            $data['senderIoss'] ?? null
+            name: $data['senderFullname'] ?? '',
+            country: $data['senderCountry'] ?? '',
+            phone: $data['senderPhone'] ?? '',
+            email: $data['senderEmail'] ?? '',
+            city: $data['senderCity'] ?? '',
+            addressLine1: $addressLine,
+            addressLine2: $data['senderAddress2'] ?? null,
+            addressLine3: $data['senderAddress3'] ?? null,
+            company: $data['senderCompany'] ?? null,
+            state: $data['senderState'] ?? null,
+            zip: $data['senderZip'] ?? null,
+            vat: $data['senderVat'] ?? null,
+            eori: $data['senderEori'] ?? null,
+            nlVat: $data['senderNlVat'] ?? null,
+            euEori: $data['senderEuEori'] ?? null,
+            ioss: $data['senderIoss'] ?? null
         );
     }
 
@@ -317,19 +317,19 @@ class ConsigneeAddress extends BaseAddress
         $addressLine = $data['deliveryAddress'] ?? '';
 
         return new self(
-            $data['deliveryFullname'] ?? '',
-            $data['deliveryCountry'] ?? '',
-            $data['deliveryPhone'] ?? '',
-            $data['deliveryEmail'] ?? '',
-            $data['deliveryCity'] ?? '',
-            $addressLine,
-            $data['deliveryAddress2'] ?? null,
-            $data['deliveryAddress3'] ?? null,
-            $data['deliveryCompany'] ?? null,
-            $data['deliveryState'] ?? null,
-            $data['deliveryPostalCode'] ?? null,
-            $data['deliveryVat'] ?? null,
-            $data['deliveryPudoLocationId'] ?? null
+            name: $data['deliveryFullname'] ?? '',
+            country: $data['deliveryCountry'] ?? '',
+            phone: $data['deliveryPhone'] ?? '',
+            email: $data['deliveryEmail'] ?? '',
+            city: $data['deliveryCity'] ?? '',
+            addressLine1: $addressLine,
+            addressLine2: $data['deliveryAddress2'] ?? null,
+            addressLine3: $data['deliveryAddress3'] ?? null,
+            company: $data['deliveryCompany'] ?? null,
+            state: $data['deliveryState'] ?? null,
+            zip: $data['deliveryPostalCode'] ?? null,
+            vat: $data['deliveryVat'] ?? null,
+            pudoLocationId: $data['deliveryPudoLocationId'] ?? null
         );
     }
 
@@ -479,9 +479,9 @@ readonly class ShipmentApiResponse
     public static function fromArray(array $data): self
     {
         return new self(
-            $data['ErrorLevel'] ?? 0,
-            $data['Error'] ?? '',
-            isset($data['Shipment'])
+            errorLevel: $data['ErrorLevel'] ?? 0,
+            error: $data['Error'] ?? '',
+            shipmentDetails: isset($data['Shipment'])
                 ? ShipmentDetails::fromArray($data['Shipment'])
                 : null
         );
@@ -509,17 +509,17 @@ readonly class ShipmentDetails
     public static function fromArray(array $data): self
     {
         return new self(
-            $data['TrackingNumber'],
-            $data['ShipperReference'],
-            $data['DisplayId'],
-            $data['Service'],
-            $data['Carrier'],
-            $data['CarrierTrackingNumber'],
-            $data['CarrierLocalTrackingNumber'],
-            $data['CarrierTrackingUrl'],
-            $data['LabelFormat'],
-            $data['LabelType'],
-            $data['LabelImage']
+            trackingNumber: $data['TrackingNumber'],
+            shipperReference: $data['ShipperReference'],
+            displayId: $data['DisplayId'],
+            service: $data['Service'],
+            carrier: $data['Carrier'],
+            carrierTrackingNumber: $data['CarrierTrackingNumber'],
+            carrierLocalTrackingNumber: $data['CarrierLocalTrackingNumber'],
+            carrierTrackingUrl: $data['CarrierTrackingUrl'],
+            labelFormat: $data['LabelFormat'],
+            labelType: $data['LabelType'],
+            labelImage: $data['LabelImage']
         );
     }
 }
