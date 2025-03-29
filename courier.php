@@ -63,13 +63,25 @@ readonly class LabelService
      */
     public function printLabel(ShipmentDetails $shipmentDetails): string
     {
-        $label = match ($shipmentDetails->labelFormat) {
-            'PDF' => $this->decodePDFLabelFromResponse($shipmentDetails->labelImage),
-            default => throw new Exception('Label type not supported')
-        };
+        $label = $this->getLabelByShipmentDetails($shipmentDetails);
         $this->setHeadersForBrowser($label, $shipmentDetails->trackingNumber);
 
         return $label;
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function getLabelByShipmentDetails(ShipmentDetails $shipmentDetails): string
+    {
+        $handlers = [
+            'PDF' => fn($shipment) => $this->decodePDFLabelFromResponse($shipment->labelImage),
+            // 'ZPL' => fn($shipment) => $this->decodeZPLLabelFromResponse($shipment->labelImage),
+            // ...
+        ];
+
+        $handler = $handlers[$shipmentDetails->labelFormat] ?? throw new Exception('Label type not supported');
+        return $handler($shipmentDetails);
     }
 
     /**
@@ -79,11 +91,7 @@ readonly class LabelService
     {
         $pdfContent = base64_decode($labelImage);
 
-        if ($pdfContent === false) {
-            throw new Exception('PDF content is empty');
-        }
-
-        return $pdfContent;
+        return $pdfContent !== false ? $pdfContent : throw new Exception('PDF content is empty');
     }
 
     private function setHeadersForBrowser(string $label, string $trackingNumber): void
@@ -247,22 +255,22 @@ class ConsignorAddress extends BaseAddress
         $addressLine = $data['senderAddress'] ?? '';
 
         return new self(
-            name: $data['senderFullname'] ?? '',
-            country: $data['senderCountry'] ?? '',
-            phone: $data['senderPhone'] ?? '',
-            email: $data['senderEmail'] ?? '',
-            city: $data['senderCity'] ?? '',
-            addressLine1: $addressLine,
-            addressLine2: $data['senderAddress2'] ?? null,
-            addressLine3: $data['senderAddress3'] ?? null,
-            company: $data['senderCompany'] ?? null,
-            state: $data['senderState'] ?? null,
-            zip: $data['senderZip'] ?? null,
-            vat: $data['senderVat'] ?? null,
-            eori: $data['senderEori'] ?? null,
-            nlVat: $data['senderNlVat'] ?? null,
-            euEori: $data['senderEuEori'] ?? null,
-            ioss: $data['senderIoss'] ?? null
+            $data['senderFullname'] ?? '',
+            $data['senderCountry'] ?? '',
+            $data['senderPhone'] ?? '',
+            $data['senderEmail'] ?? '',
+            $data['senderCity'] ?? '',
+            $addressLine,
+            $data['senderAddress2'] ?? null,
+            $data['senderAddress3'] ?? null,
+            $data['senderCompany'] ?? null,
+            $data['senderState'] ?? null,
+            $data['senderZip'] ?? null,
+            $data['senderVat'] ?? null,
+            $data['senderEori'] ?? null,
+            $data['senderNlVat'] ?? null,
+            $data['senderEuEori'] ?? null,
+            $data['senderIoss'] ?? null
         );
     }
 
@@ -309,19 +317,19 @@ class ConsigneeAddress extends BaseAddress
         $addressLine = $data['deliveryAddress'] ?? '';
 
         return new self(
-            name: $data['deliveryFullname'] ?? '',
-            country: $data['deliveryCountry'] ?? '',
-            phone: $data['deliveryPhone'] ?? '',
-            email: $data['deliveryEmail'] ?? '',
-            city: $data['deliveryCity'] ?? '',
-            addressLine1: $addressLine,
-            addressLine2: $data['deliveryAddress2'] ?? null,
-            addressLine3: $data['deliveryAddress3'] ?? null,
-            company: $data['deliveryCompany'] ?? null,
-            state: $data['deliveryState'] ?? null,
-            zip: $data['deliveryPostalCode'] ?? null,
-            vat: $data['deliveryVat'] ?? null,
-            pudoLocationId: $data['deliveryPudoLocationId'] ?? null
+            $data['deliveryFullname'] ?? '',
+            $data['deliveryCountry'] ?? '',
+            $data['deliveryPhone'] ?? '',
+            $data['deliveryEmail'] ?? '',
+            $data['deliveryCity'] ?? '',
+            $addressLine,
+            $data['deliveryAddress2'] ?? null,
+            $data['deliveryAddress3'] ?? null,
+            $data['deliveryCompany'] ?? null,
+            $data['deliveryState'] ?? null,
+            $data['deliveryPostalCode'] ?? null,
+            $data['deliveryVat'] ?? null,
+            $data['deliveryPudoLocationId'] ?? null
         );
     }
 
@@ -471,9 +479,9 @@ readonly class ShipmentApiResponse
     public static function fromArray(array $data): self
     {
         return new self(
-            errorLevel: $data['ErrorLevel'] ?? 0,
-            error: $data['Error'] ?? '',
-            shipmentDetails: isset($data['Shipment'])
+            $data['ErrorLevel'] ?? 0,
+            $data['Error'] ?? '',
+            isset($data['Shipment'])
                 ? ShipmentDetails::fromArray($data['Shipment'])
                 : null
         );
@@ -501,17 +509,17 @@ readonly class ShipmentDetails
     public static function fromArray(array $data): self
     {
         return new self(
-            trackingNumber: $data['TrackingNumber'],
-            shipperReference: $data['ShipperReference'],
-            displayId: $data['DisplayId'],
-            service: $data['Service'],
-            carrier: $data['Carrier'],
-            carrierTrackingNumber: $data['CarrierTrackingNumber'],
-            carrierLocalTrackingNumber: $data['CarrierLocalTrackingNumber'],
-            carrierTrackingUrl: $data['CarrierTrackingUrl'],
-            labelFormat: $data['LabelFormat'],
-            labelType: $data['LabelType'],
-            labelImage: $data['LabelImage']
+            $data['TrackingNumber'],
+            $data['ShipperReference'],
+            $data['DisplayId'],
+            $data['Service'],
+            $data['Carrier'],
+            $data['CarrierTrackingNumber'],
+            $data['CarrierLocalTrackingNumber'],
+            $data['CarrierTrackingUrl'],
+            $data['LabelFormat'],
+            $data['LabelType'],
+            $data['LabelImage']
         );
     }
 }
@@ -562,11 +570,7 @@ readonly class ApiClient
     {
         $response = curl_exec($curlHandle);
 
-        if ($response === false) {
-            throw new Exception('cURL request failed');
-        }
-
-        return $response;
+        return $response !== false ? $response : throw new Exception('cURL request failed');
     }
 
     /**
@@ -575,12 +579,7 @@ readonly class ApiClient
     private function validateCurlExecution(CurlHandle $curlHandle): void
     {
         $curlError = curl_errno($curlHandle);
-
-        if ($curlError !== 0) {
-            throw new Exception(
-                sprintf('cURL error %d: %s', $curlError, curl_error($curlHandle))
-            );
-        }
+        $curlError !== 0 && throw new Exception(sprintf('cURL error %d: %s', $curlError, curl_error($curlHandle)));
     }
 
     /**
@@ -588,13 +587,7 @@ readonly class ApiClient
      */
     private function parseResponse(string $response): array
     {
-        $parsedResponse = json_decode($response, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception('Invalid JSON response');
-        }
-
-        return $parsedResponse;
+        return json_decode($response, true, 512, JSON_THROW_ON_ERROR);
     }
 
     /**
@@ -607,13 +600,12 @@ readonly class ApiClient
             10 => 'Fatal error, command is not completed at all: %s',
         ];
 
-        if (isset($errorMap[$response->errorLevel])) {
-            $message = sprintf(
+        isset($errorMap[$response->errorLevel]) && throw new Exception(
+            sprintf(
                 $errorMap[$response->errorLevel],
                 json_encode($response->error)
-            );
-            throw new Exception($message);
-        }
+            )
+        );
     }
 }
 
