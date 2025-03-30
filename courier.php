@@ -53,15 +53,16 @@ readonly class SpringCourier
         exit();
     }
 
-//    /**
-//     * @throws Exception
-//     */
-//    public function downloadSticker(Shipment $shipment): void
-//    {
-//        $label = $this->labelService->printLabel($shipment->getShipmentDetails());
-//        echo $label;
-//        exit();
-//    }
+    // Alternative way to download sticker
+    /**
+     * @throws Exception
+     */
+    public function downloadSticker(Shipment $shipment): void
+    {
+        $label = $this->labelService->printLabel($shipment->getShipmentDetails());
+        echo $label;
+        exit();
+    }
 }
 
 readonly class LabelService
@@ -529,7 +530,7 @@ readonly class ApiClient
     public function executeRequest(string $apiUrl, array $data): ShipmentApiResponse
     {
         $data['Apikey'] = $this->apiKey;
-        $jsonData = json_encode($this->removeNullValues($data));
+        $jsonData = json_encode($this->removeEmptyValues($data));
         $curlHandle = $this->initializeCurlPostRequest($apiUrl, $jsonData);
 
         $response = $this->sendCurlRequest($curlHandle);
@@ -542,9 +543,10 @@ readonly class ApiClient
         return $responseData;
     }
 
-    private function removeNullValues(array $array): array
+    private function removeEmptyValues(array $array): array
     {
-        return array_filter($array, fn($value) => $value !== null);
+        $array = array_map(fn($item) => is_array($item) ? $this->removeEmptyValues($item) : $item, $array);
+        return array_filter($array, fn($item) => is_array($item) ? !empty($item) : $item !== null && $item !== '');
     }
 
     private function initializeCurlPostRequest(string $apiUrl, string $jsonData): CurlHandle
