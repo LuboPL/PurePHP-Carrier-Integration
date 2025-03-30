@@ -11,9 +11,9 @@ readonly class SpringCourier
     private LabelService $labelService;
     private ShipmentMapper $shipmentMapper;
 
-    public function __construct(private string $apiKey)
+    public function __construct(string $apiKey)
     {
-        $this->client = new ApiClient();
+        $this->client = new ApiClient($apiKey);
         $this->labelService = new LabelService();
         $this->shipmentMapper = new ShipmentMapper();
     }
@@ -27,7 +27,6 @@ readonly class SpringCourier
         $response = $this->client->executeRequest(
             self::API_URL,
             $this->shipmentMapper->mapRequestData(
-                $this->apiKey,
                 self::CREATE_ORDER_SHIPMENT_COMMAND,
                 $shipment->jsonSerialize()
             )
@@ -45,7 +44,6 @@ readonly class SpringCourier
         $response = $this->client->executeRequest(
             self::API_URL,
             $this->shipmentMapper->mapRequestData(
-                $this->apiKey,
                 self::GET_SHIPMENT_LABEL_COMMAND,
                 ['TrackingNumber' => $trackingNumber]
             )
@@ -54,6 +52,16 @@ readonly class SpringCourier
         echo $label;
         exit();
     }
+
+//    /**
+//     * @throws Exception
+//     */
+//    public function downloadSticker(Shipment $shipment): void
+//    {
+//        $label = $this->labelService->printLabel($shipment->getShipmentDetails());
+//        echo $label;
+//        exit();
+//    }
 }
 
 readonly class LabelService
@@ -64,7 +72,7 @@ readonly class LabelService
     public function printLabel(ShipmentDetails $shipmentDetails): string
     {
         $label = $this->getLabelByShipmentDetails($shipmentDetails);
-        $this->setHeadersForBrowser($label, $shipmentDetails->trackingNumber);
+        $this->setHeadersForBrowser($label, $shipmentDetails);
 
         return $label;
     }
@@ -94,10 +102,10 @@ readonly class LabelService
         return $pdfContent !== false ? $pdfContent : throw new Exception('PDF content is empty');
     }
 
-    private function setHeadersForBrowser(string $label, string $trackingNumber): void
+    private function setHeadersForBrowser(string $label, ShipmentDetails $shipmentDetails): void
     {
-        header('Content-Type: application/pdf');
-        header(sprintf('Content-Disposition: attachment; filename="%s_label.pdf"', $trackingNumber));
+        header(sprintf('Content-Type: %s', AttachmentContentType::getTypeOrDefault($shipmentDetails->labelFormat)));
+        header(sprintf('Content-Disposition: attachment; filename="%s_label.pdf"', $shipmentDetails->trackingNumber));
         header('Content-Transfer-Encoding: binary');
         header(sprintf('Content-Length: %d', strlen($label)));
         header('Cache-Control: no-cache, no-store, must-revalidate');
@@ -139,10 +147,9 @@ readonly class ShipmentMapper
         );
     }
 
-    public function mapRequestData(string $apiKey, string $apiCommand, array $data): array
+    public function mapRequestData(string $apiCommand, array $data): array
     {
         return [
-            'Apikey' => $apiKey,
             'Command' => $apiCommand,
             'Shipment' => $data
         ];
@@ -192,15 +199,16 @@ abstract class BaseAddress implements JsonSerializable
     {
         if (strlen($this->addressLine1) <= 30) return;
 
-        $fullAddress = $this->addressLine1;
-        $this->addressLine1 = substr($fullAddress, 0, 30);
-        strlen($fullAddress) > 30 && $this->addressLine2 = substr($fullAddress, 30, 30);
-        strlen($fullAddress) > 60 && $this->addressLine3 = substr($fullAddress, 60, 30);
+        $lines = explode("\n", wordwrap($this->addressLine1, 30, "\n", true));
+
+        $this->addressLine1 = $lines[0] ?? '';
+        $this->addressLine2 = $lines[1] ?? '';
+        $this->addressLine3 = $lines[2] ?? '';
     }
 
     public function jsonSerialize(): array
     {
-        $baseFields = [
+         return [
             'Name' => $this->name,
             'Company' => $this->company,
             'AddressLine1' => $this->addressLine1,
@@ -214,8 +222,6 @@ abstract class BaseAddress implements JsonSerializable
             'Email' => $this->email,
             'Vat' => $this->vat
         ];
-
-        return array_filter($baseFields, fn($value) => $value !== null);
     }
 }
 
@@ -280,7 +286,7 @@ class ConsignorAddress extends BaseAddress
             'Ioss' => $this->ioss
         ];
 
-        return array_filter(array_merge($baseFields, $specificFields), fn($value) => $value !== null);
+        return array_merge($baseFields, $specificFields);
     }
 }
 
@@ -334,7 +340,7 @@ class ConsigneeAddress extends BaseAddress
         $baseFields = parent::jsonSerialize();
         $specificFields = ['PudoLocationId' => $this->pudoLocationId];
 
-        return array_filter(array_merge($baseFields, $specificFields), fn($value) => $value !== null);
+        return array_merge($baseFields, $specificFields);
     }
 }
 
@@ -377,10 +383,11 @@ class Shipment implements JsonSerializable
 
     public function jsonSerialize(): array
     {
-        $data = [
+        return [
             'ShipperReference' => $this->shipperReference,
             'Service' => $this->service,
             'Weight' => $this->weight,
+            'Value' => $this->value,
             'LabelFormat' => $this->labelFormat,
             'WeightUnit' => $this->weightUnit,
             'Currency' => $this->currency,
@@ -390,11 +397,6 @@ class Shipment implements JsonSerializable
             'ConsigneeAddress' => $this->consigneeAddress->jsonSerialize(),
             'ConsignorAddress' => $this->consignorAddress->jsonSerialize(),
             'Products' => $this->products,
-        ];
-
-        !empty($this->value) && $data['Value'] = $this->value;
-
-        $optionalFields = [
             'OrderReference' => $this->orderReference,
             'OrderDate' => $this->orderDate,
             'DisplayId' => $this->displayId,
@@ -408,8 +410,6 @@ class Shipment implements JsonSerializable
             'ExportCarrierName' => $this->exportCarrierName,
             'ExportAwb' => $this->exportAwb
         ];
-
-        return array_merge($data, array_filter($optionalFields, fn($value) => $value !== null));
     }
 
     public function getShipmentDetails(): ShipmentDetails
@@ -443,7 +443,7 @@ readonly class Product implements JsonSerializable
 
     public function jsonSerialize(): array
     {
-        $data = [
+        return [
             'Description' => $this->description,
             'Sku' => $this->sku,
             'HsCode' => $this->hsCode,
@@ -452,13 +452,10 @@ readonly class Product implements JsonSerializable
             'PurchaseUrl' => $this->purchaseUrl,
             'Quantity' => $this->quantity,
             'Value' => $this->value,
-            'Weight' => $this->weight
+            'Weight' => $this->weight,
+            'DaysForReturn' => $this->daysForReturn,
+            'NonReturnable' => $this->nonReturnable,
         ];
-
-        $this->daysForReturn !== null && $data['DaysForReturn'] = $this->daysForReturn;
-        $this->nonReturnable !== null && $data['NonReturnable'] = $this->nonReturnable;
-
-        return $data;
     }
 }
 
@@ -522,7 +519,7 @@ readonly class ShipmentDetails
 
 readonly class ApiClient
 {
-    public function __construct(private int $curlTimeout = 30)
+    public function __construct(private string $apiKey, private int $curlTimeout = 30)
     {
     }
 
@@ -531,7 +528,8 @@ readonly class ApiClient
      */
     public function executeRequest(string $apiUrl, array $data): ShipmentApiResponse
     {
-        $jsonData = json_encode($data);
+        $data['Apikey'] = $this->apiKey;
+        $jsonData = json_encode($this->removeNullValues($data));
         $curlHandle = $this->initializeCurlPostRequest($apiUrl, $jsonData);
 
         $response = $this->sendCurlRequest($curlHandle);
@@ -542,6 +540,11 @@ readonly class ApiClient
         curl_close($curlHandle);
 
         return $responseData;
+    }
+
+    private function removeNullValues(array $array): array
+    {
+        return array_filter($array, fn($value) => $value !== null);
     }
 
     private function initializeCurlPostRequest(string $apiUrl, string $jsonData): CurlHandle
@@ -591,19 +594,44 @@ readonly class ApiClient
      */
     private function validateApiResponse(ShipmentApiResponse $response): void
     {
-        $errorMap = [
-            1 => 'Command completed with errors: %s',
-            10 => 'Fatal error, command is not completed at all: %s',
-        ];
+        if ($response->errorLevel === 0) return;
 
-        isset($errorMap[$response->errorLevel]) && throw new Exception(
-            sprintf(
-                $errorMap[$response->errorLevel],
-                json_encode($response->error)
-            )
-        );
+        $error = ShipmentError::tryFrom($response->errorLevel)
+            ?? throw new Exception(sprintf('Undefined error code: %d', $response->errorLevel));
+
+        throw new Exception(sprintf($error->getMessage(), json_encode($response->error)));
     }
 }
 
+enum ShipmentError: int
+{
+    case COMMAND_COMPLETED_WITH_ERRORS = 1;
+    case FATAL_ERROR = 10;
 
+    public function getMessage(): string
+    {
+        return match ($this) {
+            self::COMMAND_COMPLETED_WITH_ERRORS => 'Command completed with errors: %s',
+            self::FATAL_ERROR => 'Fatal error, command is not completed at all: %s',
+        };
+    }
+}
 
+enum AttachmentContentType: string
+{
+    case PDF = 'PDF';
+    // case ZPL = 'ZPL';
+    // ...
+    public function getType(): string
+    {
+        return match ($this) {
+            self::PDF => 'application/pdf',
+            // self:: ZPL => 'application/x-zpl'
+        };
+    }
+
+    public static function getTypeOrDefault(string $format): string
+    {
+        return self::tryFrom($format)?->getType() ?? 'application/pdf';
+    }
+}

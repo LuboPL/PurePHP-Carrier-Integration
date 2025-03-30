@@ -98,6 +98,9 @@ try {
     // 3. Get shipping label and force a download dialog
     $springCourier->packagePDF($shipment->getShipmentDetails()->trackingNumber);
 
+    // Another way to download sticker
+//    $springCourier->downloadSticker($shipment);
+
 } catch (Exception $exception) {
     echo $exception->getMessage();
 }
