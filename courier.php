@@ -106,12 +106,21 @@ readonly class LabelService
     private function setHeadersForBrowser(string $label, ShipmentDetails $shipmentDetails): void
     {
         header(sprintf('Content-Type: %s', AttachmentContentType::getTypeOrDefault($shipmentDetails->labelFormat)));
-        header(sprintf('Content-Disposition: attachment; filename="%s_label.pdf"', $shipmentDetails->trackingNumber));
+        header(sprintf('Content-Disposition: attachment; filename="%s"', $this->getFilename($shipmentDetails)));
         header('Content-Transfer-Encoding: binary');
         header(sprintf('Content-Length: %d', strlen($label)));
         header('Cache-Control: no-cache, no-store, must-revalidate');
         header('Pragma: no-cache');
         header('Expires: 0');
+    }
+
+    private function getFilename(ShipmentDetails $shipmentDetails): string
+    {
+        return sprintf(
+            '%s_label.%s',
+            $shipmentDetails->trackingNumber,
+            strtolower($shipmentDetails->labelFormat)
+        );
     }
 }
 
