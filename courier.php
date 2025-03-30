@@ -53,7 +53,7 @@ readonly class SpringCourier
         exit();
     }
 
-    // Alternative way to download sticker
+    // Alternative way to download sticker without next request
     /**
      * @throws Exception
      */
@@ -160,15 +160,15 @@ readonly class ShipmentMapper
     {
         return array_map(
             fn(array $product) => (new Product(
-                description: $product['description'],
+                description: $product['description'] ?? '',
                 sku: $product['sku'] ?? '',
-                hsCode: $product['hsCode'],
+                hsCode: $product['hsCode'] ?? '',
                 originCountry: $product['originCountry'] ?? '',
                 imgUrl: $product['imgUrl'] ?? '',
                 purchaseUrl: $product['purchaseUrl'] ?? '',
-                quantity: $product['quantity'],
-                value: $product['value'],
-                weight: $product['weight'],
+                quantity: $product['quantity'] ?? '',
+                value: $product['value'] ?? '',
+                weight: $product['weight'] ?? '',
                 daysForReturn: $product['daysForReturn'] ?? null,
                 nonReturnable: $product['nonReturnable'] ?? null
             ))->jsonSerialize(),
