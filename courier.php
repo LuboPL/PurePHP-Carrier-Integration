@@ -79,8 +79,8 @@ readonly class LabelService
             // 'ZPL' => fn($shipment) => $this->decodeZPLLabelFromResponse($shipment->labelImage),
             // ...
         ];
-
         $handler = $handlers[$shipmentDetails->labelFormat] ?? throw new Exception('Label type not supported');
+
         return $handler($shipmentDetails);
     }
 
@@ -190,16 +190,12 @@ abstract class BaseAddress implements JsonSerializable
 
     protected function normalizeAddressLines(): void
     {
-        if (strlen($this->addressLine1) <= 30) {
-            return;
-        }
+        if (strlen($this->addressLine1) <= 30) return;
 
         $fullAddress = $this->addressLine1;
         $this->addressLine1 = substr($fullAddress, 0, 30);
-        $this->addressLine2 = substr($fullAddress, 30, 30);
-        $this->addressLine3 = strlen($fullAddress) > 60
-            ? substr($fullAddress, 60, 30)
-            : null;
+        strlen($fullAddress) > 30 && $this->addressLine2 = substr($fullAddress, 30, 30);
+        strlen($fullAddress) > 60 && $this->addressLine3 = substr($fullAddress, 60, 30);
     }
 
     public function jsonSerialize(): array
