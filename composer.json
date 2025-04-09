@@ -1,0 +1,14 @@
+{
+  "name": "spring-shipment/courier-integration",
+  "description": "Parcel registration",
+  "type": "project",
+  "license": "proprietary",
+  "require": {
+    "php": "8.3.*"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    }
+  }
+}
